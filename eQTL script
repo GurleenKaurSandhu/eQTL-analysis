@@ -1,0 +1,45 @@
+##R packages for eQTL analysis
+# Load Libraries
+library(readxl)
+library(vcfR)
+library(tidyverse)
+library(MatrixEQTL)
+
+# set working directory
+#setwd()
+
+# Import the expression data
+all = read_xlsx('input_expression.xlsx')
+genes = all$gene
+ge = as.matrix(ge[, -1])
+rownames(ge) = genes
+write.table(ge, 'ge.txt', sep = '\t', row.names = T)
+rm(all, ge)
+
+#Import the genotype data
+data.lines = length(count.fields('freebayes.vcf', comment.char = '#'))
+chunk.n = 1e5 
+start.seq = seq(0, data.lines-1, by = chunk.n)
+for (n in start.seq){
+  # need to distinguish first iteration so we can set colnames = T and append = F
+  first = ifelse(n == 0, T, F) 
+  # need to distinguish last iteration so that chunk.n = ttl rows modulo chunk size
+  lines = ifelse(n == max(start.seq), (data.lines %% chunk.n) - 1, chunk.n)
+  tmp = read.vcfR('freebayes.vcf', nrows = lines, skip = n)
+  gt = extract.gt(tmp, as.numeric = T)
+  write.table(gt, 'genotype.txt', sep = '\t', 
+              row.names = T, col.names = first,
+              append = !first)
+}
+
+##change class of gt
+genotype <- read.table(file="genotype.txt", sep="\t") ##additional step
+gt1=as.data.frame(genotype) ##change gt to dataframe 
+class(gt1)
+names(gt1)
+gt2=gt1 ##making copy
+
+gt2$id=rownames(gt2) ##adding column id
+write.table(gt2, 'gt2', sep = '\t')
+
+
